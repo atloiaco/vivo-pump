@@ -1,31 +1,15 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-vivopump -- module of helper functions for the pump
+#!/usr/bin/env/python
+""" vivopump -- module of helper functions for the pump
 """
 
-import sys
 import csv
 import string
 import random
-import logging
 
 __author__ = "Michael Conlon"
 __copyright__ = "Copyright (c) 2015 Michael Conlon"
 __license__ = "New BSD license"
 __version__ = "0.8.4"
-
-# Establish logging
-
-logging.captureWarnings(True)
-logger = logging.getLogger(__name__)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler = logging.StreamHandler(sys.stderr)
-# handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-# logger.setLevel(logging.DEBUG)
-logger.setLevel(logging.INFO)
 
 
 class InvalidDefException(Exception):
@@ -326,31 +310,84 @@ def get_vivo_sponsorid(parms):
     return dict(zip(sponsorid, uri))
 
 
+def get_vivo_authors_count(parms):
+    """
+    Queries VIVO and returns an integer representing the number of distinct authors in VIVO
+    :param parms: vivo_query parms
+    :return: Integer that represents the number of distinct authors
+    """
+
+    query = """
+    SELECT (count(distinct(?person)) as ?count)
+    WHERE
+    {
+        ?person a foaf:Person .
+    }
+    """
+
+    a = vivo_query(query,parms)
+    num_authors = [x['count']['value'] for x in a['results']['bindings']]
+    return num_authors
+
 def get_vivo_authors(parms):
     """
     Query VIVO and return a list of all the authors found in VIVO.  Authors are people connected to
-    publications through authorships
+    publications through authorships.
     :param: parms: vivo_query parms
     :return: dictionary of author uri keyed by display_name (that won't work!)
     """
-    query = """
-    SELECT ?uri ?display_name
-    WHERE
-    {
-        ?art a bibo:AcademicArticle .
-        ?art bibo:doi ?doi .
-        ?art vivo:relatedBy ?a .
-        ?a a vivo:Authorship .
-        ?a vivo:relates ?author .
-        ?uri a foaf:Person .
-        ?uri rdfs:label ?display_name .
-    }
-    """
-    a = vivo_query(query, parms)
-    display_name = [x['display_name']['value'] for x in a['results']['bindings']]
-    uri = [x['uri']['value'] for x in a['results']['bindings']]
-    return dict(zip(display_name, uri))
+    last_name = []
+    first_name = []
+    middle_name = []
+    uri = []
+    count = get_vivo_authors_count(parms)
+    count_int = int(count[0])
+    offset = 0
 
+    result = []
+
+    while offset < count_int:
+        print "offset is: " + str(offset)
+        query = """
+         SELECT ?person_uri ?fname ?lname ?mname
+         WHERE
+         {
+             ?person_uri a foaf:Person .
+             ?person_uri obo:ARG_2000028 ?contact_info .
+             ?contact_info vcard:hasName ?name .
+             ?name vcard:familyName ?lname .
+             OPTIONAL { ?name vcard:givenName ?fname . }
+             OPTIONAL { ?name vcard:middleName ?mname . }
+         }
+         limit 1000 offset """ + str(offset) +"""
+         """
+        offset += 1000
+
+        json = vivo_query(query, parms)
+        for row in json['results']['bindings']:
+            uri = row['person_uri']['value']
+
+            uri_data = {
+                'lname': row['lname']['value'] if 'lname' in row else '',
+                'fname': row['fname']['value'] if 'fname' in row else '',
+            }
+            # add a new dictionary to the result list
+            result.append({uri: uri_data})
+
+        #print result
+        #print a
+        #last_name.append([x['lname']['value'] for x in a['results']['bindings']])
+        #if 'fname' not in a:
+        #    first_name.append(None)
+        #else:
+        #    first_name.append([x['fname']['value'] for x in a['results']['bindings']])
+        # middle_name.append([x['mname']['value'] for x in a['results']['bindings']])
+        # uri.append([x['person']['value'] for x in a['results']['bindings']])
+
+
+    #return dict(zip(last_name, first_name, middle_name, uri))
+    print result
+    return result
 
 def get_vivo_positions(parms):
     """
@@ -675,6 +712,7 @@ def vivo_query(query, parms, debug=False):
     :rtype: dict
     """
     from SPARQLWrapper import SPARQLWrapper, JSON
+    import sys
 
     if debug:
         print >>sys.stderr, "in vivo_query"
@@ -1412,6 +1450,7 @@ def improve_title(s):
         "Progs ": "Programs ",
         "Prov ": "Provisional ",
         "Psr ": "PSR ",
+        "Publ ": "Publications ",
         "Radiol ": "Radiology ",
         "Rcv ": "Receiving ",
         "Rdmzd ": "Randomized ",
@@ -1708,27 +1747,23 @@ def get_args():
 
     if args.config is None:
         args.config = program_defaults['config']
-        logger.debug("No config file specified -- using hardcoded defaults")
-    else:
-        logger.debug("Reading config file: {}".format(args.config))
 
-    # Read the config parameters from the file specified in the command line
+    #   Config file values overwrite program defaults
+
     config = ConfigParser.ConfigParser()
-    config.read(args.config)
-
-    # Config file values overwrite program defaults
+    config.read(args.config)  # Read the config file from the config filename specified in the command line args
     for section in config.sections():
         for name, val in config.items(section):
             program_defaults[name] = val
-            if 'prefix' != name:
-                logger.debug("Param {}= {}".format(name, val))
 
-    # Non null command line values overwrite the config file values
+    #   Non null command line values overwrite the config file values
+
     for name, val in vars(args).items():
         if val is not None:
             program_defaults[name] = val
 
-    # Put the final values back in args
+    #   Put the final values back in args
+
     for name, val in program_defaults.items():
         if val == 'tab':
             val = '\t'
@@ -1739,10 +1774,7 @@ def get_args():
 
 def get_parms():
     """
-    Use get args to get the args, and return a dictionary of the args ready for
-    use in pump software.
-    @see #get_args()
-
+    Use get args to get the args, and return a dictionary of the args ready for use in pump software
     :return: dict: parms
     """
     parms = {}

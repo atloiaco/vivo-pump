@@ -12,7 +12,7 @@ FILTERS_DIR := filters
 IN_DIR := data_in
 OUT_DIR := data_out
 
-IN_FILE_PUBLISHERS := $(IN_DIR)/tr_07_03_2015_wk_fin.bib
+IN_FILE_PUBLISHERS := $(IN_DIR)/tr_6_mon_1_500.bib
 OUT_FILE_PUBLISHERS := $(OUT_DIR)/publisher_update_data.txt
 
 CONFIG_FILE_PUBLISHERS		:= $(CONFIG_DIR)/sv_publishers.cfg

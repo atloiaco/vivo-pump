@@ -6,7 +6,7 @@
 
 import unittest
 from vivopump import new_uri, read_csv, write_csv, vivo_query, write_update_def, improve_email, improve_phone_number, \
-    comma_space, read_csv_fp, write_csv_fp, get_vivo_ufid, get_vivo_authors, get_vivo_types, get_vivo_sponsorid, \
+    comma_space, read_csv_fp, write_csv_fp, get_vivo_ufid, get_vivo_authors, get_vivo_authors_count, get_vivo_types, get_vivo_sponsorid, \
     improve_title, make_update_query, read_update_def, make_rdf_term, get_graph, \
     improve_dollar_amount, InvalidDataException, InvalidDefException, PathLengthException, improve_date, \
     improve_deptid, improve_sponsor_award_id, improve_jobcode_description, improve_course_title, replace_initials, \
@@ -383,13 +383,12 @@ PREFIX vivo: <http://vivoweb.org/ontology/core#>
         result = get_vivo_ufid(VIVOGetUFIDTestCase.query_parms)
         self.assertTrue(len(result) > 0)
 
-
-class VIVOGetAuthorsTestCase(unittest.TestCase):
-    query_parms = {'queryuri': 'http://localhost:8080/vivo/api/sparqlQuery',
-                   'username': 'vivo_root@school.edu',
-                   'password': 'v;bisons',
-                   'uriprefix': 'http://vivo.school.edu/individual/n',
-                   'prefix':
+class VIVOGetVivoAuthorsCountTestCase(unittest.TestCase):
+    query_parms = {'queryuri' : 'http://dev.vivo.ufl.edu/api/sparqlQuery',
+                   'uriprefix' : 'http://vivo.ufl.edu/individual/n',
+                   'username' : 'new_admin@vivo.ufl.edu',
+                   'password' : 'Password1',
+                   'prefix' :
 '''
 PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
@@ -406,9 +405,38 @@ PREFIX vitrop: <http://vitro.mannlib.cornell.edu/ns/vitro/public#>
 PREFIX vivo: <http://vivoweb.org/ontology/core#>
 '''
                    }
+    def test_get_vivo_authors_count(self):
+        result = get_vivo_authors_count(self.query_parms)
+        print result
+        self.assertTrue(result > 0)
+
+class VIVOGetAuthorsTestCase(unittest.TestCase):
+    query_parms = {'queryuri' : 'http://dev.vivo.ufl.edu/api/sparqlQuery',
+                   'uriprefix' : 'http://vivo.ufl.edu/individual/n',
+                   'username' : 'new_admin@vivo.ufl.edu',
+                   'password' : 'Password1',
+                   'prefix':
+'''
+PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:   <http://www.w3.org/2001/XMLSchema#>
+PREFIX owl:   <http://www.w3.org/2002/07/owl#>
+PREFIX vitro: <http://vitro.mannlib.cornell.edu/ns/vitro/0.7#>
+PREFIX bibo: <http://purl.org/ontology/bibo/>
+PREFIX event: <http://purl.org/NET/c4dm/event.owl#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX uf: <http://vivo.school.edu/ontology/uf-extension#>
+PREFIX vitrop: <http://vitro.mannlib.cornell.edu/ns/vitro/public#>
+PREFIX vivo: <http://vivoweb.org/ontology/core#>
+PREFIX vcard:    <http://www.w3.org/2006/vcard/ns#>
+'''
+                   }
 
     def test_vivo_get_authors(self):
         result = get_vivo_authors(VIVOGetAuthorsTestCase.query_parms)
+        print result
         self.assertTrue(len(result) > 0)
 
 
@@ -430,7 +458,6 @@ PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX uf: <http://vivo.school.edu/ontology/uf-extension#>
-PREFIX ufVivo: <http://vivo.school.edu/ontology/uf-extension#>
 PREFIX vitrop: <http://vitro.mannlib.cornell.edu/ns/vitro/public#>
 PREFIX vivo: <http://vivoweb.org/ontology/core#>
 '''
